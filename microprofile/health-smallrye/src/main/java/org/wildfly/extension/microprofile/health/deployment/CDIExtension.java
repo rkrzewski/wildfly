@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Instance;
@@ -57,6 +58,7 @@ public class CDIExtension implements Extension {
 
     private final MicroProfileHealthReporter reporter;
     private final Module module;
+    private final Supplier<BeanManager> beanMangerSupplier;
 
     // Use a single Jakarta Contexts and Dependency Injection instance to select and destroy all HealthCheck probes instances
     private Instance<Object> instance;
@@ -67,18 +69,18 @@ public class CDIExtension implements Extension {
     private HealthCheck defaultStartupCheck;
 
 
-    public CDIExtension(MicroProfileHealthReporter healthReporter, Module module) {
+    public CDIExtension(MicroProfileHealthReporter healthReporter, Module module, Supplier<BeanManager> beanMangerSupplier) {
         this.reporter = healthReporter;
         this.module = module;
-
+        this.beanMangerSupplier = beanMangerSupplier;
     }
 
     /**
      * Get Jakarta Contexts and Dependency Injection <em>instances</em> of HealthCheck and
      * add them to the {@link MicroProfileHealthReporter}.
      */
-    private void afterDeploymentValidation(@Observes final AfterDeploymentValidation avd, BeanManager bm) {
-        instance = bm.createInstance();
+    private void afterDeploymentValidation(@Observes final AfterDeploymentValidation avd) {
+        instance = beanMangerSupplier.get().createInstance();
 
         addHealthChecks(Liveness.Literal.INSTANCE, reporter::addLivenessCheck, livenessChecks);
         addHealthChecks(Readiness.Literal.INSTANCE, reporter::addReadinessCheck, readinessChecks);
